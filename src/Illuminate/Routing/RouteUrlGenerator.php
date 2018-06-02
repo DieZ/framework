@@ -52,6 +52,13 @@ class RouteUrlGenerator
     ];
 
     /**
+     * strict mode.
+     *
+     * @var bool
+     */
+    protected $strictMode;
+
+    /**
      * Create a new Route URL generator.
      *
      * @param  \Illuminate\Routing\UrlGenerator  $url
@@ -195,11 +202,13 @@ class RouteUrlGenerator
     {
         $path = $this->replaceNamedParameters($path, $parameters);
 
-        $path = preg_replace_callback('/\{.*?\}/', function ($match) use (&$parameters) {
-            return (empty($parameters) && ! Str::endsWith($match[0], '?}'))
-                        ? $match[0]
-                        : array_shift($parameters);
-        }, $path);
+        if( ! $this->strictMode) {
+            $path = preg_replace_callback('/\{.*?\}/', function ($match) use (&$parameters) {
+                return (empty($parameters) && !Str::endsWith($match[0], '?}'))
+                    ? $match[0]
+                    : array_shift($parameters);
+            }, $path);
+        }
 
         return trim(preg_replace('/\{.*?\?\}/', '', $path), '/');
     }
@@ -309,5 +318,18 @@ class RouteUrlGenerator
         $this->defaultParameters = array_merge(
             $this->defaultParameters, $defaults
         );
+    }
+
+    /**
+     * Set strict mode.
+     *
+     * @param  bool  $strict
+     * @return $this
+     */
+    public function setStrictMode($strict)
+    {
+        $this->strictMode = $strict;
+
+        return $this;
     }
 }

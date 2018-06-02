@@ -257,6 +257,37 @@ class RoutingUrlGeneratorTest extends TestCase
         $this->assertEquals('http://www.foo.com/foo/bar/bar/breeze', $url->route('baz', ['baz' => 'bar', 'boom'=>null, 'diez'=>null]));
     }
 
+    /**
+     *
+     */
+    public function testRouteGenerationWithStrictMode()
+    {
+        $url = new UrlGenerator(
+            $routes = new RouteCollection,
+            $request = Request::create('http://www.foo.com/')
+        );
+
+        $url->setStrictMode(true);
+        /*
+         * Named Routes with Parameters...
+         */
+        $route = new Route(['GET'], 'foo/bar/{baz}/breeze/{boom}', ['as' => 'bar']);
+        $routes->add($route);
+
+        $route = new Route(['GET'], 'foo/bar/{baz?}/breeze/{boom?}', ['as' => 'baz']);
+        $routes->add($route);
+
+        try {
+            $url->route('bar', ['boom' => 'wall', 'diez'=>'sergey']);
+            $this->assertTrue(false);
+        } catch (\Illuminate\Routing\Exceptions\UrlGenerationException $e){
+            $this->assertTrue(true);
+        }
+
+        $this->assertEquals('http://www.foo.com/foo/bar/breeze/wall?diez=sergey', $url->route('baz', ['boom' => 'wall', 'diez'=>'sergey']));
+
+    }
+
     public function testFluentRouteNameDefinitions()
     {
         $url = new UrlGenerator(

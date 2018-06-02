@@ -102,6 +102,13 @@ class UrlGenerator implements UrlGeneratorContract
     protected $routeGenerator;
 
     /**
+     * strict mode for RouteUrlGenerator.
+     *
+     * @var bool
+     */
+    protected $strictMode = false;
+
+    /**
      * Create a new URL Generator instance.
      *
      * @param  \Illuminate\Routing\RouteCollection  $routes
@@ -530,6 +537,7 @@ class UrlGenerator implements UrlGeneratorContract
         if (! $this->routeGenerator) {
             $this->routeGenerator = new RouteUrlGenerator($this, $this->request);
         }
+        $this->routeGenerator->setStrictMode($this->strictMode);
 
         return $this->routeGenerator;
     }
@@ -704,6 +712,23 @@ class UrlGenerator implements UrlGeneratorContract
     public function setRootControllerNamespace($rootNamespace)
     {
         $this->rootNamespace = $rootNamespace;
+
+        return $this;
+    }
+
+    /**
+     * Set strict mode for RouteUrlGenerator.
+     *
+     * @param  bool  $strict
+     * @return $this
+     */
+    public function setStrictMode($strict)
+    {
+        $this->strictMode = $strict;
+
+        if ($this->routeGenerator) {
+            $this->routeGenerator->setStrictMode($strict);
+        }
 
         return $this;
     }
