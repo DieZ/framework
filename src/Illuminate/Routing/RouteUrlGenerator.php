@@ -273,6 +273,7 @@ class RouteUrlGenerator
             );
         }
         $query = trim($query, '&');
+
         return '' != $query ? '?'.$query : '';
     }
 
