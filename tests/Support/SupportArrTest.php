@@ -5,6 +5,7 @@ namespace Illuminate\Tests\Support;
 use stdClass;
 use ArrayObject;
 use Illuminate\Support\Arr;
+use InvalidArgumentException;
 use Illuminate\Support\Carbon;
 use PHPUnit\Framework\TestCase;
 use Illuminate\Support\Collection;
@@ -83,7 +84,7 @@ class SupportArrTest extends TestCase
 
     public function testDivide()
     {
-        list($keys, $values) = Arr::divide(['name' => 'Desk']);
+        [$keys, $values] = Arr::divide(['name' => 'Desk']);
         $this->assertEquals(['name'], $keys);
         $this->assertEquals(['Desk'], $values);
     }
@@ -157,7 +158,7 @@ class SupportArrTest extends TestCase
     {
         // Flat arrays are unaffected
         $array = ['#foo', '#bar', '#baz'];
-        $this->assertEquals(['#foo', '#bar', '#baz'], Arr::flatten(['#foo', '#bar', '#baz']));
+        $this->assertEquals(['#foo', '#bar', '#baz'], Arr::flatten($array));
 
         // Nested arrays are flattened with existing flat items
         $array = [['#foo', '#bar'], '#baz'];
@@ -419,37 +420,47 @@ class SupportArrTest extends TestCase
         $this->assertEquals(['emails' => ['joe@example.com' => 'Joe', 'jane@localhost' => 'Jane']], $array);
     }
 
+    public function testQuery()
+    {
+        $this->assertSame('', Arr::query([]));
+        $this->assertSame('foo=bar', Arr::query(['foo' => 'bar']));
+        $this->assertSame('foo=bar&bar=baz', Arr::query(['foo' => 'bar', 'bar' => 'baz']));
+        $this->assertSame('foo=bar&bar=1', Arr::query(['foo' => 'bar', 'bar' => true]));
+        $this->assertSame('foo=bar', Arr::query(['foo' => 'bar', 'bar' => null]));
+        $this->assertSame('foo=bar&bar=', Arr::query(['foo' => 'bar', 'bar' => '']));
+    }
+
     public function testRandom()
     {
         $random = Arr::random(['foo', 'bar', 'baz']);
         $this->assertContains($random, ['foo', 'bar', 'baz']);
 
         $random = Arr::random(['foo', 'bar', 'baz'], 0);
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(0, $random);
 
         $random = Arr::random(['foo', 'bar', 'baz'], 1);
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(1, $random);
         $this->assertContains($random[0], ['foo', 'bar', 'baz']);
 
         $random = Arr::random(['foo', 'bar', 'baz'], 2);
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(2, $random);
         $this->assertContains($random[0], ['foo', 'bar', 'baz']);
         $this->assertContains($random[1], ['foo', 'bar', 'baz']);
 
         $random = Arr::random(['foo', 'bar', 'baz'], '0');
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(0, $random);
 
         $random = Arr::random(['foo', 'bar', 'baz'], '1');
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(1, $random);
         $this->assertContains($random[0], ['foo', 'bar', 'baz']);
 
         $random = Arr::random(['foo', 'bar', 'baz'], '2');
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(2, $random);
         $this->assertContains($random[0], ['foo', 'bar', 'baz']);
         $this->assertContains($random[1], ['foo', 'bar', 'baz']);
@@ -458,11 +469,11 @@ class SupportArrTest extends TestCase
     public function testRandomOnEmptyArray()
     {
         $random = Arr::random([], 0);
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(0, $random);
 
         $random = Arr::random([], '0');
-        $this->assertInternalType('array', $random);
+        $this->assertIsArray($random);
         $this->assertCount(0, $random);
     }
 
@@ -472,19 +483,19 @@ class SupportArrTest extends TestCase
 
         try {
             Arr::random([]);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             $exceptions++;
         }
 
         try {
             Arr::random([], 1);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             $exceptions++;
         }
 
         try {
             Arr::random([], 2);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             $exceptions++;
         }
 
@@ -671,5 +682,18 @@ class SupportArrTest extends TestCase
         $this->assertEquals($array, Arr::wrap($array));
         $this->assertEquals([$object], Arr::wrap($object));
         $this->assertEquals([], Arr::wrap(null));
+        $this->assertEquals([null], Arr::wrap([null]));
+        $this->assertEquals([null, null], Arr::wrap([null, null]));
+        $this->assertEquals([''], Arr::wrap(''));
+        $this->assertEquals([''], Arr::wrap(['']));
+        $this->assertEquals([false], Arr::wrap(false));
+        $this->assertEquals([false], Arr::wrap([false]));
+        $this->assertEquals([0], Arr::wrap(0));
+
+        $obj = new stdClass;
+        $obj->value = 'a';
+        $obj = unserialize(serialize($obj));
+        $this->assertEquals([$obj], Arr::wrap($obj));
+        $this->assertSame($obj, Arr::wrap($obj)[0]);
     }
 }

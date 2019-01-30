@@ -5,7 +5,9 @@ namespace Illuminate\Tests\Console\Scheduling;
 use Mockery as m;
 use Illuminate\Support\Carbon;
 use PHPUnit\Framework\TestCase;
+use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Console\Scheduling\Event;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Console\Scheduling\CacheEventMutex;
 use Illuminate\Console\Scheduling\CacheSchedulingMutex;
 
@@ -40,15 +42,15 @@ class CacheSchedulingMutexTest extends TestCase
     {
         parent::setUp();
 
-        $this->cacheFactory = m::mock('Illuminate\Contracts\Cache\Factory');
-        $this->cacheRepository = m::mock('Illuminate\Contracts\Cache\Repository');
+        $this->cacheFactory = m::mock(Factory::class);
+        $this->cacheRepository = m::mock(Repository::class);
         $this->cacheFactory->shouldReceive('store')->andReturn($this->cacheRepository);
         $this->cacheMutex = new CacheSchedulingMutex($this->cacheFactory);
         $this->event = new Event(new CacheEventMutex($this->cacheFactory), 'command');
         $this->time = Carbon::now();
     }
 
-    public function testMutexReceviesCorrectCreate()
+    public function testMutexReceivesCorrectCreate()
     {
         $this->cacheRepository->shouldReceive('add')->once()->with($this->event->mutexName().$this->time->format('Hi'), true, 60)->andReturn(true);
 

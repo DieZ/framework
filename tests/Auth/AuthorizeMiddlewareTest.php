@@ -10,9 +10,9 @@ use PHPUnit\Framework\TestCase;
 use Illuminate\Auth\Access\Gate;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Container\Container;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Contracts\Routing\Registrar;
-use Illuminate\Contracts\Auth\Factory as Auth;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Contracts\Auth\Access\Gate as GateContract;
 
@@ -20,6 +20,7 @@ class AuthorizeMiddlewareTest extends TestCase
 {
     protected $container;
     protected $user;
+    protected $router;
 
     public function tearDown()
     {
@@ -33,13 +34,6 @@ class AuthorizeMiddlewareTest extends TestCase
         $this->user = new stdClass;
 
         Container::setInstance($this->container = new Container);
-
-        $this->container->singleton(Auth::class, function () {
-            $auth = m::mock(Auth::class);
-            $auth->shouldReceive('authenticate')->once()->andReturn(null);
-
-            return $auth;
-        });
 
         $this->container->singleton(GateContract::class, function () {
             return new Gate($this->container, function () {
@@ -90,6 +84,42 @@ class AuthorizeMiddlewareTest extends TestCase
         ]);
 
         $response = $this->router->dispatch(Request::create('dashboard', 'GET'));
+
+        $this->assertEquals($response->content(), 'success');
+    }
+
+    public function testSimpleAbilityWithStringParameter()
+    {
+        $this->gate()->define('view-dashboard', function ($user, $param) {
+            return $param === 'true';
+        });
+
+        $this->router->get('dashboard', [
+            'middleware' => Authorize::class.':view-dashboard,true',
+            'uses' => function () {
+                return 'success';
+            },
+        ]);
+
+        $response = $this->router->dispatch(Request::create('dashboard', 'GET'));
+
+        $this->assertEquals($response->content(), 'success');
+    }
+
+    public function testSimpleAbilityWithStringParameterFromRouteParameter()
+    {
+        $this->gate()->define('view-dashboard', function ($user, $param) {
+            return $param === 'true';
+        });
+
+        $this->router->get('dashboard/{route_parameter}', [
+            'middleware' => Authorize::class.':view-dashboard,route_parameter',
+            'uses' => function () {
+                return 'success';
+            },
+        ]);
+
+        $response = $this->router->dispatch(Request::create('dashboard/true', 'GET'));
 
         $this->assertEquals($response->content(), 'success');
     }
@@ -192,7 +222,7 @@ class AuthorizeMiddlewareTest extends TestCase
 
     public function testModelInstanceAsParameter()
     {
-        $instance = m::mock(\Illuminate\Database\Eloquent\Model::class);
+        $instance = m::mock(Model::class);
 
         $this->gate()->define('success', function ($user, $model) use ($instance) {
             $this->assertSame($model, $instance);
@@ -208,7 +238,7 @@ class AuthorizeMiddlewareTest extends TestCase
             $nextParam = $param;
         };
 
-        (new Authorize($this->container->make(Auth::class), $this->gate()))
+        (new Authorize($this->gate()))
             ->handle($request, $next, 'success', $instance);
     }
 

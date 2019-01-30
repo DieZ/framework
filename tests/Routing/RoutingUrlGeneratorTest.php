@@ -4,6 +4,7 @@ namespace Illuminate\Tests\Routing;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Routing\RouteCollection;
@@ -141,6 +142,28 @@ class RoutingUrlGeneratorTest extends TestCase
         $this->assertEquals('/something/named-route', $url->route('plain', [], false));
     }
 
+    public function testUrlFormattersShouldReceiveTargetRoute()
+    {
+        $url = new UrlGenerator(
+            $routes = new RouteCollection,
+            $request = Request::create('http://abc.com/')
+        );
+
+        $namedRoute = new Route(['GET'], '/bar', ['as' => 'plain', 'root' => 'bar.com', 'path' => 'foo']);
+        $routes->add($namedRoute);
+
+        $url->formatHostUsing(function ($root, $route) {
+            return $route ? 'http://'.$route->getAction('root') : $root;
+        });
+
+        $url->formatPathUsing(function ($path, $route) {
+            return $route ? '/'.$route->getAction('path') : $path;
+        });
+
+        $this->assertEquals('http://abc.com/foo/bar', $url->to('foo/bar'));
+        $this->assertEquals('http://bar.com/foo', $url->route('plain'));
+    }
+
     public function testBasicRouteGeneration()
     {
         $url = new UrlGenerator(
@@ -207,6 +230,7 @@ class RoutingUrlGeneratorTest extends TestCase
          */
         $url->defaults(['locale' => 'en']);
         $route = new Route(['GET'], 'foo', ['as' => 'defaults', 'domain' => '{locale}.example.com', function () {
+            //
         }]);
         $routes->add($route);
 
@@ -222,6 +246,7 @@ class RoutingUrlGeneratorTest extends TestCase
         $this->assertEquals('/foo/bar/taylor/breeze/otwell?fly=wall', $url->route('bar', ['taylor', 'otwell', 'fly' => 'wall'], false));
         $this->assertEquals('https://www.foo.com/foo/baz', $url->route('baz'));
         $this->assertEquals('http://www.foo.com/foo/bam', $url->action('foo@bar'));
+        $this->assertEquals('http://www.foo.com/foo/bam', $url->action(['foo', 'bar']));
         $this->assertEquals('http://www.foo.com/foo/invoke', $url->action('InvokableActionStub'));
         $this->assertEquals('http://www.foo.com/foo/bar/taylor/breeze/otwell?wall&woz', $url->route('bar', ['wall', 'woz', 'boom' => 'otwell', 'baz' => 'taylor']));
         $this->assertEquals('http://www.foo.com/foo/bar/taylor/breeze/otwell?wall&woz', $url->route('bar', ['taylor', 'otwell', 'wall', 'woz']));
@@ -527,6 +552,7 @@ class RoutingUrlGeneratorTest extends TestCase
         );
 
         $route = new Route(['GET'], 'foo/{one}/{two?}/{three?}', ['as' => 'foo', function () {
+            //
         }]);
         $routes->add($route);
 
@@ -579,6 +605,70 @@ class RoutingUrlGeneratorTest extends TestCase
         $this->assertEquals($url->to('/'), $url->previous());
 
         $this->assertEquals($url->to('/foo'), $url->previous('/foo'));
+    }
+
+    /**
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Route [not_exists_route] not defined.
+     */
+    public function testRouteNotDefinedException()
+    {
+        $url = new UrlGenerator(
+            $routes = new RouteCollection,
+            $request = Request::create('http://www.foo.com/')
+        );
+
+        $url->route('not_exists_route');
+    }
+
+    public function testSignedUrl()
+    {
+        $url = new UrlGenerator(
+            $routes = new RouteCollection,
+            $request = Request::create('http://www.foo.com/')
+        );
+        $url->setKeyResolver(function () {
+            return 'secret';
+        });
+
+        $route = new Route(['GET'], 'foo', ['as' => 'foo', function () {
+            //
+        }]);
+        $routes->add($route);
+
+        $request = Request::create($url->signedRoute('foo'));
+
+        $this->assertTrue($url->hasValidSignature($request));
+
+        $request = Request::create($url->signedRoute('foo').'?tempered=true');
+
+        $this->assertFalse($url->hasValidSignature($request));
+    }
+
+    public function testSignedRelativeUrl()
+    {
+        $url = new UrlGenerator(
+            $routes = new RouteCollection,
+            $request = Request::create('http://www.foo.com/')
+        );
+        $url->setKeyResolver(function () {
+            return 'secret';
+        });
+
+        $route = new Route(['GET'], 'foo', ['as' => 'foo', function () {
+            //
+        }]);
+        $routes->add($route);
+
+        $result = $url->signedRoute('foo', [], null, false);
+
+        $request = Request::create($result);
+
+        $this->assertTrue($url->hasValidSignature($request, false));
+
+        $request = Request::create($url->signedRoute('foo', [], null, false).'?tempered=true');
+
+        $this->assertFalse($url->hasValidSignature($request, false));
     }
 }
 

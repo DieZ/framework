@@ -93,7 +93,6 @@ class SupportMessageBagTest extends TestCase
         $container->setFormat(':message');
         $container->add('foo', 'bar');
         $container->add('foo', 'baz');
-        $messages = $container->getMessages();
         $this->assertEquals('bar', $container->first('foo'));
     }
 
@@ -101,7 +100,6 @@ class SupportMessageBagTest extends TestCase
     {
         $container = new MessageBag;
         $container->setFormat(':message');
-        $messages = $container->getMessages();
         $this->assertEquals('', $container->first('foo'));
     }
 
@@ -111,7 +109,6 @@ class SupportMessageBagTest extends TestCase
         $container->setFormat(':message');
         $container->add('name.first', 'jon');
         $container->add('name.last', 'snow');
-        $messages = $container->getMessages();
         $this->assertEquals('jon', $container->first('name.*'));
     }
 
@@ -297,5 +294,20 @@ class SupportMessageBagTest extends TestCase
         $container = new MessageBag;
         $container->setFormat(':message');
         $this->assertEquals(':message', $container->getFormat());
+    }
+
+    public function testConstructorUniquenessConsistency()
+    {
+        $messageBag = new MessageBag(['messages' => ['first', 'second', 'third', 'third']]);
+        $messages = $messageBag->getMessages();
+        $this->assertEquals(['first', 'second', 'third'], $messages['messages']);
+
+        $messageBag = new MessageBag;
+        $messageBag->add('messages', 'first');
+        $messageBag->add('messages', 'second');
+        $messageBag->add('messages', 'third');
+        $messageBag->add('messages', 'third');
+        $messages = $messageBag->getMessages();
+        $this->assertEquals(['first', 'second', 'third'], $messages['messages']);
     }
 }

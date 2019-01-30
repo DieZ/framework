@@ -1,3 +1,4 @@
+dist: xenial
 language: php
 
 env:
@@ -13,8 +14,9 @@ matrix:
     - php: 7.2
     - php: 7.2
       env: setup=lowest
-
-sudo: false
+    - php: 7.3
+    - php: 7.3
+      env: setup=lowest
 
 cache:
   directories:
@@ -23,12 +25,14 @@ cache:
 services:
   - memcached
   - redis-server
+  - mysql
 
 before_install:
   - phpenv config-rm xdebug.ini || true
   - echo "extension = memcached.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   - printf "\n" | pecl install -f redis
   - travis_retry composer self-update
+  - mysql -e 'CREATE DATABASE forge;'
 
 install:
   - if [[ $setup = 'stable' ]]; then travis_retry composer update --prefer-dist --no-interaction --prefer-stable --no-suggest; fi

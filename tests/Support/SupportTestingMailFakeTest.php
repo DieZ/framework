@@ -8,9 +8,20 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Testing\Fakes\MailFake;
 use PHPUnit\Framework\ExpectationFailedException;
 use PHPUnit\Framework\Constraint\ExceptionMessage;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 
 class SupportTestingMailFakeTest extends TestCase
 {
+    /**
+     * @var MailFake
+     */
+    private $fake;
+
+    /**
+     * @var MailableStub
+     */
+    private $mailable;
+
     protected function setUp()
     {
         parent::setUp();
@@ -30,6 +41,17 @@ class SupportTestingMailFakeTest extends TestCase
         $this->fake->to('taylor@laravel.com')->send($this->mailable);
 
         $this->fake->assertSent(MailableStub::class);
+    }
+
+    public function testAssertSentWhenRecipientHasPreferredLocale()
+    {
+        $user = new LocalizedRecipientStub;
+
+        $this->fake->to($user)->send($this->mailable);
+
+        $this->fake->assertSent(MailableStub::class, function ($mail) use ($user) {
+            return $mail->hasTo($user) && $mail->locale === 'au';
+        });
     }
 
     public function testAssertNotSent()
@@ -123,7 +145,7 @@ class MailableStub extends Mailable
 {
     public $framework = 'Laravel';
 
-    protected $version = '5.6';
+    protected $version = '5.7';
 
     /**
      * Build the message.
@@ -141,7 +163,7 @@ class QueueableMailableStub extends Mailable implements ShouldQueue
 {
     public $framework = 'Laravel';
 
-    protected $version = '5.6';
+    protected $version = '5.7';
 
     /**
      * Build the message.
@@ -152,5 +174,15 @@ class QueueableMailableStub extends Mailable implements ShouldQueue
     {
         $this->with('first_name', 'Taylor')
              ->withLastName('Otwell');
+    }
+}
+
+class LocalizedRecipientStub implements HasLocalePreference
+{
+    public $email = 'taylor@laravel.com';
+
+    public function preferredLocale()
+    {
+        return 'au';
     }
 }

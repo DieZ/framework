@@ -7,6 +7,7 @@ use Orchestra\Testbench\TestCase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factory;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * @group integration
@@ -53,7 +54,7 @@ class EloquentFactoryBuilderTest extends TestCase
 
         $factory->afterMakingState(FactoryBuildableUser::class, 'with_callable_server', function (FactoryBuildableUser $user, Generator $faker) {
             $server = factory(FactoryBuildableServer::class)
-                ->states('callable')
+                ->state('callable')
                 ->make(['user_id' => $user->id]);
 
             $user->servers->push($server);
@@ -90,8 +91,8 @@ class EloquentFactoryBuilderTest extends TestCase
         });
 
         $factory->afterCreatingState(FactoryBuildableUser::class, 'with_callable_server', function (FactoryBuildableUser $user, Generator $faker) {
-            $server = factory(FactoryBuildableServer::class)
-                ->states('callable')
+            factory(FactoryBuildableServer::class)
+                ->state('callable')
                 ->create(['user_id' => $user->id]);
         });
 
@@ -144,10 +145,7 @@ class EloquentFactoryBuilderTest extends TestCase
         });
     }
 
-    /**
-     * @test
-     */
-    public function creating_factory_models()
+    public function test_creating_factory_models()
     {
         $user = factory(FactoryBuildableUser::class)->create();
 
@@ -156,64 +154,49 @@ class EloquentFactoryBuilderTest extends TestCase
         $this->assertTrue($user->is($dbUser));
     }
 
-    /**
-     * @test
-     */
-    public function creating_factory_models_overriding_attributes()
+    public function test_creating_factory_models_overriding_attributes()
     {
         $user = factory(FactoryBuildableUser::class)->create(['name' => 'Zain']);
 
         $this->assertEquals('Zain', $user->name);
     }
 
-    /**
-     * @test
-     */
-    public function creating_collection_of_models()
+    public function test_creating_collection_of_models()
     {
         $users = factory(FactoryBuildableUser::class, 3)->create();
 
         $instances = factory(FactoryBuildableUser::class, 3)->make();
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Collection::class, $users);
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Collection::class, $instances);
+        $this->assertInstanceOf(Collection::class, $users);
+        $this->assertInstanceOf(Collection::class, $instances);
         $this->assertCount(3, $users);
         $this->assertCount(3, $instances);
         $this->assertCount(3, FactoryBuildableUser::find($users->pluck('id')->toArray()));
         $this->assertCount(0, FactoryBuildableUser::find($instances->pluck('id')->toArray()));
     }
 
-    /**
-     * @test
-     */
-    public function creating_models_with_callable_states()
+    public function test_creating_models_with_callable_state()
     {
         $server = factory(FactoryBuildableServer::class)->create();
 
-        $callableServer = factory(FactoryBuildableServer::class)->states('callable')->create();
+        $callableServer = factory(FactoryBuildableServer::class)->state('callable')->create();
 
         $this->assertEquals('active', $server->status);
         $this->assertEquals(['Storage', 'Data'], $server->tags);
         $this->assertEquals('callable', $callableServer->status);
     }
 
-    /**
-     * @test
-     */
-    public function creating_models_with_inline_states()
+    public function test_creating_models_with_inline_state()
     {
         $server = factory(FactoryBuildableServer::class)->create();
 
-        $inlineServer = factory(FactoryBuildableServer::class)->states('inline')->create();
+        $inlineServer = factory(FactoryBuildableServer::class)->state('inline')->create();
 
         $this->assertEquals('active', $server->status);
         $this->assertEquals('inline', $inlineServer->status);
     }
 
-    /**
-     * @test
-     */
-    public function creating_models_with_relationships()
+    public function test_creating_models_with_relationships()
     {
         factory(FactoryBuildableUser::class, 2)
             ->create()
@@ -225,10 +208,7 @@ class EloquentFactoryBuilderTest extends TestCase
             });
     }
 
-    /**
-     * @test
-     */
-    public function creating_models_on_custom_connection()
+    public function test_creating_models_on_custom_connection()
     {
         $user = factory(FactoryBuildableUser::class)
             ->connection('alternative-connection')
@@ -240,25 +220,22 @@ class EloquentFactoryBuilderTest extends TestCase
         $this->assertTrue($user->is($dbUser));
     }
 
-    /** @test **/
-    public function creating_models_with_after_callback()
+    public function test_creating_models_with_after_callback()
     {
         $team = factory(FactoryBuildableTeam::class)->create();
 
         $this->assertTrue($team->users->contains($team->owner));
     }
 
-    /** @test **/
-    public function creating_models_with_after_callback_states()
+    public function test_creating_models_with_after_callback_state()
     {
-        $user = factory(FactoryBuildableUser::class)->states('with_callable_server')->create();
+        $user = factory(FactoryBuildableUser::class)->state('with_callable_server')->create();
 
         $this->assertNotNull($user->profile);
         $this->assertNotNull($user->servers->where('status', 'callable')->first());
     }
 
-    /** @test */
-    public function making_models_with_a_custom_connection()
+    public function test_making_models_with_a_custom_connection()
     {
         $user = factory(FactoryBuildableUser::class)
             ->connection('alternative-connection')
@@ -267,18 +244,16 @@ class EloquentFactoryBuilderTest extends TestCase
         $this->assertEquals('alternative-connection', $user->getConnectionName());
     }
 
-    /** @test **/
-    public function making_models_with_after_callback()
+    public function test_making_models_with_after_callback()
     {
         $user = factory(FactoryBuildableUser::class)->make();
 
         $this->assertNotNull($user->profile);
     }
 
-    /** @test **/
-    public function making_models_with_after_callback_states()
+    public function test_making_models_with_after_callback_state()
     {
-        $user = factory(FactoryBuildableUser::class)->states('with_callable_server')->make();
+        $user = factory(FactoryBuildableUser::class)->state('with_callable_server')->make();
 
         $this->assertNotNull($user->profile);
         $this->assertNotNull($user->servers->where('status', 'callable')->first());

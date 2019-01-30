@@ -32,6 +32,13 @@ trait DetectsLostConnections
             'child connection forced to terminate due to client_idle_limit',
             'query_wait_timeout',
             'reset by peer',
+            'Physical connection is not usable',
+            'TCP Provider: Error code 0x68',
+            'php_network_getaddresses: getaddrinfo failed: Name or service not known',
+            'ORA-03114',
+            'Packets out of order. Expected',
+            'Adaptive Server connection failed',
+            'Communication link failure',
         ]);
     }
 }
